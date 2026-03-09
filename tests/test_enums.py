@@ -10,9 +10,9 @@ class TestDeviceStatus:
     def test_device_status_values(self):
         """DeviceStatus has expected values."""
         assert DeviceStatus.IN_USE.value == "in_use"
-        assert DeviceStatus.RESERVE.value == "reserve"
-        assert DeviceStatus.DECOMMISSIONED.value == "decommissioned"
         assert DeviceStatus.REPAIR.value == "repair"
+        assert DeviceStatus.SCRAPPED.value == "scrapped"
+        assert DeviceStatus.ARCHIVED.value == "archived"
 
 
 class TestCategory:

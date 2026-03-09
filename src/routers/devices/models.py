@@ -47,7 +47,7 @@ class Device(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('in_use', 'reserve', 'decommissioned', 'repair')",
+            "status IN ('in_use', 'repair', 'scrapped', 'archived')",
             name="devices_status_check",
         ),
         Index("idx_devices_status", "status"),
