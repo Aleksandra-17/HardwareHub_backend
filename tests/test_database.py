@@ -1,7 +1,5 @@
 """Tests for database module."""
 
-
-
 from src.database.base import resolve_table_name
 from src.database.dependencies import DbSession
 

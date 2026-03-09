@@ -1,7 +1,5 @@
 """Tests for misc.timezone."""
 
-
-
 from src.misc.timezone import get_datetime
 
 

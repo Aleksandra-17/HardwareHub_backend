@@ -31,6 +31,10 @@ def env_config():
         "REDIS_PASSWORD": "",
         "UVICORN_HOST": "0.0.0.0",
         "UVICORN_PORT": "8000",
+        "JWT_SECRET_KEY": "test-secret-key-for-tests-only",
+        "JWT_ALGORITHM": "HS256",
+        "JWT_ACCESS_TOKEN_EXPIRE_MINUTES": "30",
+        "JWT_REFRESH_TOKEN_EXPIRE_DAYS": "7",
     }
     with patch.dict(os.environ, env, clear=False):
         yield

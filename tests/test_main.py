@@ -1,6 +1,5 @@
 """Tests for main app."""
 
-
 from src.main import app
 
 
