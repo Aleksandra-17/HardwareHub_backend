@@ -5,9 +5,11 @@ from uuid import UUID
 from fastapi import APIRouter, Query, status
 
 from src.database.dependencies import DbSession
+from src.routers.auth.dependencies import CurrentUser
 from src.routers.devices.actions import (
     create_device,
     delete_device,
+    generate_device_qr,
     get_device,
     get_device_audit,
     list_devices,
@@ -21,7 +23,13 @@ from src.routers.devices.description import (
     LIST_DEVICES,
     UPDATE_DEVICE,
 )
-from src.routers.devices.schemas import AuditEntryRead, DeviceCreate, DeviceRead, DeviceUpdate
+from src.routers.devices.schemas import (
+    AuditEntryRead,
+    DeviceCreate,
+    DeviceRead,
+    DeviceUpdate,
+    QRCodeResponse,
+)
 from src.routers.devices.summary import (
     CREATE_DEVICE as CREATE_SUMMARY,
 )
@@ -52,6 +60,7 @@ router = APIRouter()
 )
 async def get_devices(
     session: DbSession,
+    _user: CurrentUser,
     search: str | None = Query(None, description="Поиск по inventoryNumber, name, serialNumber"),
     status: str | None = Query(None, description="Фильтр по статусу или all"),
     type: str | None = Query(None, alias="type", description="Фильтр по deviceTypeId или all"),
@@ -73,6 +82,26 @@ async def get_devices(
     )
 
 
+@router.post(
+    "/{device_id}/qr-code",
+    response_model=QRCodeResponse,
+    summary="Сгенерировать QR-код",
+    responses={404: {"description": "Устройство не найдено"}},
+)
+async def post_device_qr_code(
+    session: DbSession,
+    device_id: UUID,
+    _user: CurrentUser,
+) -> QRCodeResponse:
+    """Сгенерировать QR-код для устройства (inventory_number)."""
+    from fastapi import HTTPException
+
+    data_uri = await generate_device_qr(session, device_id)
+    if data_uri is None:
+        raise HTTPException(status_code=404, detail="Устройство не найдено")
+    return QRCodeResponse(qrCode=data_uri)
+
+
 @router.get(
     "/{device_id}/audit",
     response_model=list[AuditEntryRead],
@@ -83,6 +112,7 @@ async def get_devices(
 async def get_audit_by_device_id(
     session: DbSession,
     device_id: UUID,
+    _user: CurrentUser,
 ) -> list[AuditEntryRead]:
     """История изменений устройства."""
     entries = await get_device_audit(session, device_id)
@@ -103,9 +133,10 @@ async def get_audit_by_device_id(
 async def get_device_by_id(
     session: DbSession,
     device_id: UUID,
+    _user: CurrentUser,
 ) -> DeviceRead:
-    """Получить устройство по ID."""
-    device = await get_device(session, device_id)
+    """Получить устройство по ID (обновляет lastCheckDate)."""
+    device = await get_device(session, device_id, update_last_check=True)
     if device is None:
         from fastapi import HTTPException
 
@@ -120,9 +151,13 @@ async def get_device_by_id(
     summary=CREATE_SUMMARY,
     description=CREATE_DEVICE,
 )
-async def post_device(session: DbSession, data: DeviceCreate) -> DeviceRead:
+async def post_device(
+    session: DbSession,
+    data: DeviceCreate,
+    user: CurrentUser,
+) -> DeviceRead:
     """Создать устройство."""
-    return await create_device(session, data)
+    return await create_device(session, data, username=user.username)
 
 
 @router.patch(
@@ -136,9 +171,10 @@ async def patch_device(
     session: DbSession,
     device_id: UUID,
     data: DeviceUpdate,
+    user: CurrentUser,
 ) -> DeviceRead:
     """Обновить устройство."""
-    device = await update_device(session, device_id, data)
+    device = await update_device(session, device_id, data, username=user.username)
     if device is None:
         from fastapi import HTTPException
 
@@ -157,9 +193,10 @@ async def put_device(
     session: DbSession,
     device_id: UUID,
     data: DeviceUpdate,
+    user: CurrentUser,
 ) -> DeviceRead:
     """Обновить устройство (PUT)."""
-    return await patch_device(session, device_id, data)
+    return await patch_device(session, device_id, data, user)
 
 
 @router.delete(
@@ -167,12 +204,21 @@ async def put_device(
     status_code=status.HTTP_204_NO_CONTENT,
     summary=DELETE_SUMMARY,
     description=DELETE_DEVICE,
-    responses={404: {"description": "Устройство не найдено"}},
+    responses={
+        404: {"description": "Устройство не найдено"},
+        409: {"description": "Нельзя удалить — только scrapped/archived"},
+    },
 )
-async def delete_device_by_id(session: DbSession, device_id: UUID) -> None:
-    """Удалить устройство."""
-    deleted = await delete_device(session, device_id)
-    if not deleted:
-        from fastapi import HTTPException
+async def delete_device_by_id(
+    session: DbSession,
+    device_id: UUID,
+    user: CurrentUser,
+) -> None:
+    """Удалить устройство (только scrapped/archived)."""
+    from fastapi import HTTPException
 
+    ok, err = await delete_device(session, device_id, username=user.username)
+    if not ok:
+        if err:
+            raise HTTPException(status_code=409, detail=err)
         raise HTTPException(status_code=404, detail="Устройство не найдено")

@@ -80,6 +80,14 @@ class DeviceUpdate(BaseModel):
     qr_code: str | None = Field(None, alias="qrCode")
 
 
+class QRCodeResponse(BaseModel):
+    """QR-код в формате base64 data URI."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    qr_code: str = Field(..., alias="qrCode", serialization_alias="qrCode")
+
+
 class AuditEntryRead(BaseModel):
     """Схема чтения записи аудита."""
 

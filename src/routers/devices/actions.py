@@ -1,5 +1,6 @@
 """Бизнес-логика роутера devices."""
 
+from datetime import date
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,17 +39,30 @@ async def list_devices(
     return [_device_to_read(d) for d in devices]
 
 
-async def get_device(session: AsyncSession, device_id: UUID) -> DeviceRead | None:
-    """Получить устройство по ID."""
+async def get_device(
+    session: AsyncSession,
+    device_id: UUID,
+    *,
+    update_last_check: bool = False,
+) -> DeviceRead | None:
+    """Получить устройство по ID. Если update_last_check, обновить lastCheckDate."""
     dal = DeviceDAL(session)
     device = await dal.get_by_id(device_id)
     if device is None:
         return None
+    if update_last_check:
+        await dal.update(device, last_check_date=date.today())
     return _device_to_read(device)
 
 
-async def create_device(session: AsyncSession, data: DeviceCreate) -> DeviceRead:
+async def create_device(
+    session: AsyncSession,
+    data: DeviceCreate,
+    *,
+    username: str,
+) -> DeviceRead:
     """Создать устройство."""
+    today = date.today()
     dal = DeviceDAL(session)
     device = await dal.create(
         inventory_number=data.inventory_number,
@@ -61,19 +75,46 @@ async def create_device(session: AsyncSession, data: DeviceCreate) -> DeviceRead
         manufacturer=data.manufacturer,
         person_id=data.person_id,
         commission_date=data.commission_date,
-        last_check_date=data.last_check_date,
+        last_check_date=data.last_check_date or today,
         notes=data.notes,
         purchase_price=data.purchase_price,
         purchase_date=data.purchase_date,
         qr_code=data.qr_code,
     )
+    audit_dal = AuditEntryDAL(session)
+    await audit_dal.create(
+        device_id=device.id,
+        action="Устройство создано",
+        user=username,
+    )
     return _device_to_read(device)
+
+
+def _field_label(field: str) -> str:
+    """Человекочитаемое название поля."""
+    labels = {
+        "status": "Статус",
+        "name": "Наименование",
+        "inventory_number": "Инвентарный номер",
+        "serial_number": "Серийный номер",
+        "model": "Модель",
+        "manufacturer": "Производитель",
+        "location_id": "Кабинет",
+        "person_id": "Ответственный",
+        "commission_date": "Дата ввода",
+        "purchase_date": "Дата покупки",
+        "purchase_price": "Стоимость",
+        "notes": "Заметки",
+    }
+    return labels.get(field, field)
 
 
 async def update_device(
     session: AsyncSession,
     device_id: UUID,
     data: DeviceUpdate,
+    *,
+    username: str,
 ) -> DeviceRead | None:
     """Обновить устройство."""
     dal = DeviceDAL(session)
@@ -84,18 +125,69 @@ async def update_device(
     kwargs = {k: v for k, v in update_data.items() if hasattr(device, k)}
     if "status" in kwargs and kwargs["status"] is not None:
         kwargs["status"] = kwargs["status"].value
+    audit_actions = []
+    for key, new_val in kwargs.items():
+        old_val = getattr(device, key, None)
+        if old_val != new_val:
+            if key == "status":
+                audit_actions.append(f"Статус изменен на {new_val}")
+            else:
+                label = _field_label(key)
+                audit_actions.append(f"{label} изменено с {old_val} на {new_val}")
     device = await dal.update(device, **kwargs)
+    audit_dal = AuditEntryDAL(session)
+    for action in audit_actions:
+        await audit_dal.create(device_id=device.id, action=action, user=username)
     return _device_to_read(device)
 
 
-async def delete_device(session: AsyncSession, device_id: UUID) -> bool:
-    """Удалить устройство."""
+async def delete_device(
+    session: AsyncSession,
+    device_id: UUID,
+    *,
+    username: str,
+) -> tuple[bool, str | None]:
+    """Удалить устройство. Возвращает (ok, error_message)."""
     dal = DeviceDAL(session)
     device = await dal.get_by_id(device_id)
     if device is None:
-        return False
+        return False, None
+    from src.routers.devices.enums import DeviceStatus
+
+    status = device.status if isinstance(device.status, str) else device.status.value
+    if status not in (DeviceStatus.SCRAPPED.value, DeviceStatus.ARCHIVED.value):
+        return False, "Можно удалять только устройства со статусом scrapped или archived"
+    audit_dal = AuditEntryDAL(session)
+    await audit_dal.create(
+        device_id=device.id,
+        action="Устройство удалено",
+        user=username,
+    )
     await dal.delete(device)
-    return True
+    return True, None
+
+
+async def generate_device_qr(
+    session: AsyncSession,
+    device_id: UUID,
+) -> str | None:
+    """Сгенерировать QR-код для устройства. Возвращает base64 data URI или None если не найдено."""
+    import base64
+    import io
+
+    import qrcode
+
+    dal = DeviceDAL(session)
+    device = await dal.get_by_id(device_id)
+    if device is None:
+        return None
+    content = device.inventory_number
+    img = qrcode.make(content)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+    data_uri = f"data:image/png;base64,{b64}"
+    return data_uri
 
 
 async def get_device_audit(

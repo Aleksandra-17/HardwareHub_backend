@@ -57,6 +57,8 @@ class DeviceDAL:
             "name": Device.name,
             "status": Device.status,
             "commissionDate": Device.commission_date,
+            "purchaseDate": Device.purchase_date,
+            "purchasePrice": Device.purchase_price,
         }
         sort_column = sort_map.get(sort, Device.inventory_number)
         if order == "desc":
@@ -133,6 +135,24 @@ class AuditEntryDAL:
 
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    async def create(
+        self,
+        *,
+        device_id: UUID | None,
+        action: str,
+        user: str,
+    ) -> AuditEntry:
+        """Создать запись аудита."""
+        entry = AuditEntry(
+            device_id=device_id,
+            date=date.today(),
+            action=action,
+            user=user,
+        )
+        self.session.add(entry)
+        await self.session.flush()
+        return entry
 
     async def get_by_device_id(self, device_id: UUID) -> list[AuditEntry]:
         """Получить историю изменений устройства."""
