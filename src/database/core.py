@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import (
 from starlette.requests import Request
 
 from src.config import PostgresCfg
-from src.database.logging import SessionTracker
 
 
 def create_db_engine(connection_string: str) -> AsyncEngine:
@@ -45,12 +44,7 @@ engine = create_db_engine(
 
 def get_db(request: Request) -> AsyncSession:
     """Get database session from request state."""
-    session = request.state.db
-    if not hasattr(session, "service_session_id"):
-        session._dispatch_session_id = SessionTracker.track_session(
-            session, context="api_request_service"
-        )
-    return session
+    return request.state.db
 
 
 async_session_maker = async_sessionmaker(

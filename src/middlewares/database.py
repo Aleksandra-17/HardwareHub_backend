@@ -42,8 +42,8 @@ async def db_session_middleware(request: Request, call_next):
         session = async_session_maker()
         request.state.db = session
 
-        session._chime_service_session_id = SessionTracker.track_session(
-            session, context="api_request_chime_service"
+        session.service_session_id = SessionTracker.track_session(
+            session, context="api_request_service"
         )
 
         response = await call_next(request)
