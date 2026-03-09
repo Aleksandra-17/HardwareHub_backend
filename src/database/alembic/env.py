@@ -1,17 +1,15 @@
-from logging.config import fileConfig
 import asyncio
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from sqlalchemy.ext.asyncio import create_async_engine
+from logging.config import fileConfig
 
 from alembic import context
+from sqlalchemy import engine_from_config, pool
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from src.database.base import Base
-from src.routers.search.models import Request
-from src.routers.settings.chime_key.models import ChimeKey
-from src.routers.settings.proxy.models import Proxy
-from src.routers.settings.error_log.models import ErrorLog
+from src.routers.device_types.models import DeviceType  # noqa: F401
+from src.routers.devices.models import AuditEntry, Device  # noqa: F401
+from src.routers.locations.models import Location  # noqa: F401
+from src.routers.people.models import Person  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -73,9 +71,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
@@ -99,15 +95,12 @@ def run_async_migrations_online() -> None:
             # Use run_sync to run sync Alembic operations in async context
             await connection.run_sync(
                 lambda sync_conn: context.configure(
-                    connection=sync_conn,
-                    target_metadata=target_metadata
+                    connection=sync_conn, target_metadata=target_metadata
                 )
             )
 
             # Run migrations in sync context
-            await connection.run_sync(
-                lambda sync_conn: context.run_migrations()
-            )
+            await connection.run_sync(lambda _: context.run_migrations())
 
     # Run async migrations
     asyncio.run(do_run_migrations())
