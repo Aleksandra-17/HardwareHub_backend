@@ -58,3 +58,7 @@ skip-magic-trailing-comma = false
 # Auto-detect line endings
 line-ending = "auto"
 
+# SQLAlchemy relationship forward refs in models
+[lint.per-file-ignores]
+"**/routers/**/models.py" = ["F821", "UP037"]
+
