@@ -5,6 +5,15 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class LocationCreate(BaseModel):
+    """Схема создания локации."""
+
+    name: str = Field(..., min_length=1, max_length=255, description="Название локации")
+    building: str | None = Field(None, max_length=255, description="Корпус/здание")
+    floor: str | None = Field(None, max_length=50, description="Этаж")
+    description: str | None = Field(None, description="Описание")
+
+
 class LocationRead(BaseModel):
     """Схема чтения локации."""
 

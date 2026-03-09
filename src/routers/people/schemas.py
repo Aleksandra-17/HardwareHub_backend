@@ -5,6 +5,24 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class PersonCreate(BaseModel):
+    """Схема создания ответственного лица."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    full_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="ФИО",
+        alias="fullName",
+    )
+    position: str | None = Field(None, max_length=255, description="Должность")
+    department: str | None = Field(None, max_length=255, description="Отдел")
+    email: str | None = Field(None, max_length=255, description="Email")
+    phone: str | None = Field(None, max_length=50, description="Телефон")
+
+
 class PersonRead(BaseModel):
     """Схема чтения ответственного лица."""
 

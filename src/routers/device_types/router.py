@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from src.database.dependencies import DbSession
+from src.routers.auth.dependencies import CurrentUser
 from src.routers.device_types.actions import list_device_types
 from src.routers.device_types.description import LIST_DEVICE_TYPES
 from src.routers.device_types.schemas import DeviceTypeRead
@@ -36,6 +37,9 @@ router = APIRouter()
         }
     },
 )
-async def get_device_types(session: DbSession) -> list[DeviceTypeRead]:
+async def get_device_types(
+    session: DbSession,
+    _user: CurrentUser,
+) -> list[DeviceTypeRead]:
     """Список всех типов устройств."""
     return await list_device_types(session)
