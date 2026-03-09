@@ -1,15 +1,12 @@
 """Pytest fixtures."""
 
 import os
-from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # Set test env before importing app
 os.environ.setdefault("POSTGRES_IP", "localhost")
@@ -40,7 +37,7 @@ def env_config():
 
 
 @pytest.fixture
-def client(env_config) -> TestClient:
+def client(env_config) -> TestClient:  # noqa: ARG001 - fixture dep for ordering
     """Sync test client."""
     from src.main import app
 
@@ -79,8 +76,8 @@ def mock_db_session():
 @pytest.fixture
 def client_with_mock_db(client: TestClient, mock_db_session):
     """Client with mocked DB session."""
-    from src.main import app
     from src.database.dependencies import get_db
+    from src.main import app
 
     async def override_get_db():
         yield mock_db_session
@@ -105,7 +102,7 @@ def mock_redis():
         async def get(self, key):
             return storage.get(key)
 
-        async def set(self, key, value, ex=None):
+        async def set(self, key, value, ex=None):  # noqa: ARG002
             storage[key] = value
             return True
 
@@ -120,7 +117,7 @@ def mock_redis():
         async def exists(self, key):
             return 1 if key in storage else 0
 
-        async def expire(self, key, ttl):
+        async def expire(self, key, ttl):  # noqa: ARG002
             return True
 
         async def ttl(self, key):
