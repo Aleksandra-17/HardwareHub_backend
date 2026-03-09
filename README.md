@@ -59,6 +59,15 @@ uvicorn src.main:app --reload
 
 Application will be available at: http://localhost:8000
 
+### Аутентификация (JWT)
+
+- **Логин:** `POST /api/auth/login` — username + password → access_token, refresh_token
+- **Обновление:** `POST /api/auth/refresh` — refresh_token → новые токены
+- **Текущий пользователь:** `GET /api/auth/me` (Bearer token)
+- **Создание пользователя (admin):** `POST /api/auth/users` — автогенерация пароля
+
+Для создания первого администратора при миграции: `export JWT_INITIAL_ADMIN_PASSWORD=your-password` перед `make migrate`.
+
 API documentation:
 - Swagger UI: http://localhost:8000/api/docs (protected)
 - OpenAPI JSON: http://localhost:8000/api/openapi.json

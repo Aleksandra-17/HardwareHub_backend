@@ -93,6 +93,107 @@
 
 ---
 
+---
+
+## Аутентификация (JWT)
+
+### Логин
+
+#### `POST /api/auth/login`
+
+Вход по username и password.
+
+**Request body:**
+```json
+{
+  "username": "admin",
+  "password": "your-password"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "access_token": "eyJ...",
+  "refresh_token": "eyJ...",
+  "token_type": "bearer"
+}
+```
+
+Используйте `access_token` в заголовке: `Authorization: Bearer <access_token>`.
+
+### Обновление токенов
+
+#### `POST /api/auth/refresh`
+
+Получить новые access и refresh токены.
+
+**Request body:**
+```json
+{
+  "refresh_token": "eyJ..."
+}
+```
+
+**Response:** `200 OK` — новые токены
+
+### Выход
+
+#### `POST /api/auth/logout`
+
+Инвалидация refresh токена.
+
+**Request body (опционально):**
+```json
+{
+  "refresh_token": "eyJ..."
+}
+```
+
+### Текущий пользователь
+
+#### `GET /api/auth/me`
+
+Информация о текущем пользователе (требует Bearer token).
+
+**Response:** `200 OK`
+```json
+{
+  "id": "uuid",
+  "username": "admin",
+  "role": "admin",
+  "is_active": true
+}
+```
+
+### Создание пользователя (только admin)
+
+#### `POST /api/auth/users`
+
+Создание пользователя с автогенерированным паролем.
+
+**Request body:**
+```json
+{
+  "username": "newuser",
+  "role": "user"
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": "uuid",
+  "username": "newuser",
+  "role": "user",
+  "password": "Xy9#kL2@mN4p"
+}
+```
+
+**Важно:** пароль показывается только при создании. Сохраните его.
+
+---
+
 ## Эндпоинты
 
 ### Device Types (Типы устройств)
