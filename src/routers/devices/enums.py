@@ -1,9 +1,9 @@
 """Enums для роутера devices."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class DeviceStatus(str, Enum):
+class DeviceStatus(StrEnum):
     """Статус устройства."""
 
     IN_USE = "in_use"

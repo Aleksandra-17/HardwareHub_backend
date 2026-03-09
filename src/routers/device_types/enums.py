@@ -1,9 +1,9 @@
 """Enums для роутера device_types."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class Category(str, Enum):
+class Category(StrEnum):
     """Категория типа устройства."""
 
     COMPUTING = "computing"

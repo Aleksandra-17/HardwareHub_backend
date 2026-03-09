@@ -1,18 +1,18 @@
 """Pydantic schemas for root router endpoints."""
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class HealthStatus(str, Enum):
+class HealthStatus(StrEnum):
     """Health status enum."""
 
     HEALTHY = "healthy"
     UNHEALTHY = "unhealthy"
 
 
-class ServiceStatus(str, Enum):
+class ServiceStatus(StrEnum):
     """Individual service status enum."""
 
     CONNECTED = "connected"
