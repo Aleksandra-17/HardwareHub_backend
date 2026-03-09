@@ -42,3 +42,10 @@ PORT = 6379
 DB = 0
 PASSWORD =
 
+[JWT]
+# JWT authentication (generate SECRET_KEY: openssl rand -hex 32)
+SECRET_KEY = your-secret-key-at-least-32-chars
+ALGORITHM = HS256
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 7
+

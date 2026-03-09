@@ -118,5 +118,23 @@ class RedisCfg(CfgBase):
         return asdict(self)
 
 
+def _jwt_cfg() -> "JwtCfg":
+    return JwtCfg(
+        secret_key=_get("SECRET_KEY", "change-me-in-production-use-openssl-rand-hex-32", "JWT"),
+        algorithm=_get("ALGORITHM", "HS256", "JWT"),
+        access_token_expire_minutes=_get_int("ACCESS_TOKEN_EXPIRE_MINUTES", 30, "JWT"),
+        refresh_token_expire_days=_get_int("REFRESH_TOKEN_EXPIRE_DAYS", 7, "JWT"),
+    )
+
+
+@dataclass
+class JwtCfg(CfgBase):
+    secret_key: str = ""
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
+
+
 uvicorn_cfg = _uvicorn_cfg()
 redis_cfg = _redis_cfg()
+jwt_cfg = _jwt_cfg()
