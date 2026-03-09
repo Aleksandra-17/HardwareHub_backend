@@ -22,3 +22,29 @@ class DeviceTypeDAL:
         )
         result = await self.session.execute(stmt)
         return [(row[0], int(row[1])) for row in result.all()]
+
+    async def get_by_name(self, name: str) -> DeviceType | None:
+        """Найти тип устройства по названию."""
+        stmt = select(DeviceType).where(DeviceType.name == name)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_code(self, code: str) -> DeviceType | None:
+        """Найти тип устройства по коду."""
+        stmt = select(DeviceType).where(DeviceType.code == code)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def create(
+        self, name: str, code: str, category: str, description: str | None
+    ) -> DeviceType:
+        """Создать новый тип устройства."""
+        dt = DeviceType(
+            name=name,
+            code=code,
+            category=category,
+            description=description,
+        )
+        self.session.add(dt)
+        await self.session.flush()
+        return dt
