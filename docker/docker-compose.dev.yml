@@ -12,7 +12,7 @@ services:
     environment:
       - POSTGRES_DATABASE=postgresql
       - POSTGRES_DRIVER=asyncpg
-      - POSTGRES_DATABASE_NAME=fastapi_db
+      - POSTGRES_DATABASE_NAME=hardwarehub
       - POSTGRES_USERNAME=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_IP=postgres
@@ -36,29 +36,32 @@ services:
       - app-network
 
   postgres:
-    image: postgres:15-alpine
-    container_name: fastapi-postgres-dev
+    image: postgres:17-alpine
+    container_name: hardwarehub-postgres-dev
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=fastapi_db
+      - POSTGRES_DB=hardwarehub
     ports:
       - "5432:5432"
     volumes:
-      - postgres-dev-data:/var/lib/postgresql/data
+      - hardwarehub-postgres-dev-data:/var/lib/postgresql/data
     networks:
       - app-network
 
   redis:
     image: redis:7-alpine
-    container_name: fastapi-redis-dev
+    container_name: hardwarehub-redis-dev
     ports:
       - "6379:6379"
+    volumes:
+      - hardwarehub-redis-dev-data:/data
     networks:
       - app-network
 
 volumes:
-  postgres-dev-data:
+  hardwarehub-postgres-dev-data:
+  hardwarehub-redis-dev-data:
 
 networks:
   app-network:

@@ -12,7 +12,7 @@ services:
     environment:
       - POSTGRES_DATABASE=postgresql
       - POSTGRES_DRIVER=asyncpg
-      - POSTGRES_DATABASE_NAME=${POSTGRES_DB:-fastapi_db}
+      - POSTGRES_DATABASE_NAME=${POSTGRES_DB:-hardwarehub}
       - POSTGRES_USERNAME=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_IP=postgres
@@ -41,17 +41,17 @@ services:
       start_period: 40s
 
   postgres:
-    image: postgres:15-alpine
-    container_name: fastapi-postgres
+    image: postgres:17-alpine
+    container_name: hardwarehub-postgres
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_DB=${POSTGRES_DB:-fastapi_db}
+      - POSTGRES_DB=${POSTGRES_DB:-hardwarehub}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - hardwarehub-postgres-data:/var/lib/postgresql/data
     networks:
       - app-network
     healthcheck:
@@ -62,12 +62,12 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: fastapi-redis
+    container_name: hardwarehub-redis
     restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
-      - redis-data:/data
+      - hardwarehub-redis-data:/data
     networks:
       - app-network
     healthcheck:
@@ -92,8 +92,8 @@ services:
       - app-network
 
 volumes:
-  postgres-data:
-  redis-data:
+  hardwarehub-postgres-data:
+  hardwarehub-redis-data:
 
 networks:
   app-network:
