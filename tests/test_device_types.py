@@ -87,14 +87,14 @@ class TestDeviceTypesActions:
 class TestDeviceTypesEndpoint:
     """Test device_types API endpoint."""
 
-    def test_get_device_types_200(self, client_with_mock_db):
+    def test_get_device_types_200(self, client_authenticated):
         """GET /api/device-types returns 200."""
         with patch(
             "src.routers.device_types.actions.list_device_types",
             new_callable=AsyncMock,
             return_value=[],
         ):
-            response = client_with_mock_db.get("/api/device-types/")
+            response = client_authenticated.get("/api/device-types/")
 
             assert response.status_code == 200
             assert response.json() == []

@@ -43,14 +43,14 @@ class TestPeopleActions:
 class TestPeopleEndpoint:
     """Test people API endpoint."""
 
-    def test_get_people_200(self, client_with_mock_db):
+    def test_get_people_200(self, client_authenticated):
         """GET /api/people returns 200."""
         with patch(
             "src.routers.people.actions.list_people",
             new_callable=AsyncMock,
             return_value=[],
         ):
-            response = client_with_mock_db.get("/api/people/")
+            response = client_authenticated.get("/api/people/")
 
             assert response.status_code == 200
             assert response.json() == []

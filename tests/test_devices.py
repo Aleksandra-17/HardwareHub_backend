@@ -90,14 +90,15 @@ class TestDevicesActions:
 
     @pytest.mark.asyncio
     async def test_delete_device_not_found(self):
-        """delete_device returns False when not found."""
+        """delete_device returns (False, None) when not found."""
         mock_session = AsyncMock()
         with patch.object(DeviceDAL, "get_by_id", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = None
 
-            result = await delete_device(mock_session, uuid4())
+            ok, err = await delete_device(mock_session, uuid4(), username="test")
 
-            assert result is False
+            assert ok is False
+            assert err is None
 
     @pytest.mark.asyncio
     async def test_get_device_audit_not_found(self):
@@ -114,30 +115,30 @@ class TestDevicesActions:
 class TestDevicesEndpoint:
     """Test devices API endpoints."""
 
-    def test_get_devices_200(self, client_with_mock_db):
+    def test_get_devices_200(self, client_authenticated):
         """GET /api/devices returns 200."""
         with patch(
             "src.routers.devices.router.list_devices",
             new_callable=AsyncMock,
             return_value=[],
         ):
-            response = client_with_mock_db.get("/api/devices/")
+            response = client_authenticated.get("/api/devices/")
 
             assert response.status_code == 200
             assert response.json() == []
 
-    def test_get_device_404(self, client_with_mock_db):
+    def test_get_device_404(self, client_authenticated):
         """GET /api/devices/{id} returns 404 when not found."""
         with patch(
             "src.routers.devices.router.get_device",
             new_callable=AsyncMock,
             return_value=None,
         ):
-            response = client_with_mock_db.get(f"/api/devices/{uuid4()}")
+            response = client_authenticated.get(f"/api/devices/{uuid4()}")
 
             assert response.status_code == 404
 
-    def test_post_device_201(self, client_with_mock_db):
+    def test_post_device_201(self, client_authenticated):
         """POST /api/devices creates device."""
         uid = uuid4()
         device_read = DeviceRead(
@@ -154,7 +155,7 @@ class TestDevicesEndpoint:
             new_callable=AsyncMock,
             return_value=device_read,
         ):
-            response = client_with_mock_db.post(
+            response = client_authenticated.post(
                 "/api/devices/",
                 json={
                     "inventoryNumber": "INV-001",
@@ -167,29 +168,29 @@ class TestDevicesEndpoint:
 
             assert response.status_code == 201
 
-    def test_delete_device_404(self, client_with_mock_db):
+    def test_delete_device_404(self, client_authenticated):
         """DELETE /api/devices/{id} returns 404 when not found."""
         with patch(
             "src.routers.devices.router.delete_device",
             new_callable=AsyncMock,
-            return_value=False,
+            return_value=(False, None),
         ):
-            response = client_with_mock_db.delete(f"/api/devices/{uuid4()}")
+            response = client_authenticated.delete(f"/api/devices/{uuid4()}")
 
             assert response.status_code == 404
 
-    def test_get_audit_404(self, client_with_mock_db):
+    def test_get_audit_404(self, client_authenticated):
         """GET /api/devices/{id}/audit returns 404 when device not found."""
         with patch(
             "src.routers.devices.router.get_device_audit",
             new_callable=AsyncMock,
             return_value=None,
         ):
-            response = client_with_mock_db.get(f"/api/devices/{uuid4()}/audit")
+            response = client_authenticated.get(f"/api/devices/{uuid4()}/audit")
 
             assert response.status_code == 404
 
-    def test_get_device_200(self, client_with_mock_db):
+    def test_get_device_200(self, client_authenticated):
         """GET /api/devices/{id} returns 200 when found."""
         uid = uuid4()
         device_read = DeviceRead(
@@ -205,12 +206,12 @@ class TestDevicesEndpoint:
             new_callable=AsyncMock,
             return_value=device_read,
         ):
-            response = client_with_mock_db.get(f"/api/devices/{uid}")
+            response = client_authenticated.get(f"/api/devices/{uid}")
 
             assert response.status_code == 200
             assert response.json()["inventoryNumber"] == "INV-001"
 
-    def test_patch_device_200(self, client_with_mock_db):
+    def test_patch_device_200(self, client_authenticated):
         """PATCH /api/devices/{id} returns 200 when updated."""
         uid = uuid4()
         device_read = DeviceRead(
@@ -226,14 +227,14 @@ class TestDevicesEndpoint:
             new_callable=AsyncMock,
             return_value=device_read,
         ):
-            response = client_with_mock_db.patch(
+            response = client_authenticated.patch(
                 f"/api/devices/{uid}",
                 json={"name": "Обновлённый"},
             )
 
             assert response.status_code == 200
 
-    def test_put_device_200(self, client_with_mock_db):
+    def test_put_device_200(self, client_authenticated):
         """PUT /api/devices/{id} returns 200 when updated."""
         uid = uuid4()
         device_read = DeviceRead(
@@ -249,7 +250,7 @@ class TestDevicesEndpoint:
             new_callable=AsyncMock,
             return_value=device_read,
         ):
-            response = client_with_mock_db.put(
+            response = client_authenticated.put(
                 f"/api/devices/{uid}",
                 json={
                     "inventoryNumber": "INV-002",
@@ -262,32 +263,32 @@ class TestDevicesEndpoint:
 
             assert response.status_code == 200
 
-    def test_patch_device_404(self, client_with_mock_db):
+    def test_patch_device_404(self, client_authenticated):
         """PATCH /api/devices/{id} returns 404 when not found."""
         with patch(
             "src.routers.devices.router.update_device",
             new_callable=AsyncMock,
             return_value=None,
         ):
-            response = client_with_mock_db.patch(
+            response = client_authenticated.patch(
                 f"/api/devices/{uuid4()}",
                 json={"name": "test"},
             )
 
             assert response.status_code == 404
 
-    def test_delete_device_204(self, client_with_mock_db):
+    def test_delete_device_204(self, client_authenticated):
         """DELETE /api/devices/{id} returns 204 when deleted."""
         with patch(
             "src.routers.devices.router.delete_device",
             new_callable=AsyncMock,
-            return_value=True,
+            return_value=(True, None),
         ):
-            response = client_with_mock_db.delete(f"/api/devices/{uuid4()}")
+            response = client_authenticated.delete(f"/api/devices/{uuid4()}")
 
             assert response.status_code == 204
 
-    def test_get_audit_200(self, client_with_mock_db):
+    def test_get_audit_200(self, client_authenticated):
         """GET /api/devices/{id}/audit returns 200 with audit entries."""
         uid = uuid4()
         audit_data = [
@@ -298,6 +299,6 @@ class TestDevicesEndpoint:
             new_callable=AsyncMock,
             return_value=audit_data,
         ):
-            response = client_with_mock_db.get(f"/api/devices/{uid}/audit")
+            response = client_authenticated.get(f"/api/devices/{uid}/audit")
 
             assert response.status_code == 200

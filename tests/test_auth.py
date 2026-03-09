@@ -451,9 +451,9 @@ class TestAuthEndpoints:
         finally:
             app.dependency_overrides.pop(get_current_user_required, None)
 
-    def test_me_401_no_token(self, client_with_mock_db):
+    def test_me_401_no_token(self, client):
         """GET /api/auth/me returns 401 without token."""
-        response = client_with_mock_db.get("/api/auth/me")
+        response = client.get("/api/auth/me")
         assert response.status_code == 401
 
     def test_create_user_201(self, client_with_mock_db):

@@ -2,6 +2,7 @@
 
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -78,6 +79,18 @@ def mock_db_session():
     return session
 
 
+def _make_mock_user():
+    """Mock user for auth override."""
+    from src.routers.auth.models import User
+
+    u = MagicMock(spec=User)
+    u.id = uuid4()
+    u.username = "testuser"
+    u.role = "admin"
+    u.is_active = True
+    return u
+
+
 @pytest.fixture
 def client_with_mock_db(client: TestClient, mock_db_session):
     """Client with mocked DB session."""
@@ -96,6 +109,20 @@ def client_with_mock_db(client: TestClient, mock_db_session):
         app.dependency_overrides[get_db] = override_get_db
         yield client
         app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client_authenticated(client_with_mock_db):
+    """Client with mocked DB and auth (for protected routes)."""
+    from src.main import app
+    from src.routers.auth.dependencies import get_current_user_required
+
+    async def override_auth():
+        return _make_mock_user()
+
+    app.dependency_overrides[get_current_user_required] = override_auth
+    yield client_with_mock_db
+    app.dependency_overrides.pop(get_current_user_required, None)
 
 
 @pytest.fixture
