@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from src import config
-from src.config import PostgresCfg, RedisCfg, redis_cfg, uvicorn_cfg
+from src.config import PostgresCfg, redis_cfg, uvicorn_cfg
 
 
 class TestConfigEnvVars:
@@ -48,7 +48,7 @@ class TestConfigEnvVars:
         ):
             cfg = PostgresCfg()
             url = cfg.url
-            assert "postgresql+asyncpg://u:p@host:5432/db" == url
+            assert url == "postgresql+asyncpg://u:p@host:5432/db"
 
     def test_uvicorn_cfg(self):
         """UvicornCfg has expected structure."""
@@ -79,10 +79,12 @@ class TestConfigFallback:
 
     def test_get_raises_when_missing(self):
         """_get raises ValueError when required key is missing."""
-        with patch.dict(os.environ, {}, clear=True):
-            with patch.object(config, "_config", None):
-                with pytest.raises(ValueError, match="Missing config"):
-                    config._get("DATABASE_NAME", section="POSTGRES")
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(config, "_config", None),
+            pytest.raises(ValueError, match="Missing config"),
+        ):
+            config._get("DATABASE_NAME", section="POSTGRES")
 
     def test_get_uses_config_ini_when_env_unset(self):
         """_get uses config.ini when env var is unset."""
