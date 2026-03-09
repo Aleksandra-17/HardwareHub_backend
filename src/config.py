@@ -1,6 +1,5 @@
 import configparser
 import os
-from abc import ABC
 from dataclasses import asdict, dataclass
 
 
@@ -19,7 +18,9 @@ _config = _get_config_parser()
 
 def _get(key: str, default: str | None = None, section: str = "") -> str:
     """Read from env var first, then config.ini. Env: {SECTION}_{KEY} e.g. POSTGRES_USERNAME."""
-    env_name = f"{section}_{key}".upper().replace(".", "_") if section else key.upper().replace(".", "_")
+    env_name = (
+        f"{section}_{key}".upper().replace(".", "_") if section else key.upper().replace(".", "_")
+    )
     val = os.environ.get(env_name)
     if val is not None:
         return val
@@ -42,7 +43,9 @@ def _get_bool(key: str, default: bool = False, section: str = "") -> bool:
     return val.lower() in ("true", "1", "yes", "on")
 
 
-class CfgBase(ABC):
+class CfgBase:
+    """Base for config classes."""
+
     dict: callable = asdict
 
 
@@ -56,11 +59,19 @@ class PostgresCfg(CfgBase):
         self.ip: str = _get("IP", "localhost", "POSTGRES")
         self.port: int = _get_int("PORT", 5432, "POSTGRES")
 
-        self.database_engine_pool_timeout: int = _get_int("DATABASE_ENGINE_POOL_TIMEOUT", 30, "POSTGRES")
-        self.database_engine_pool_recycle: int = _get_int("DATABASE_ENGINE_POOL_RECYCLE", 3600, "POSTGRES")
+        self.database_engine_pool_timeout: int = _get_int(
+            "DATABASE_ENGINE_POOL_TIMEOUT", 30, "POSTGRES"
+        )
+        self.database_engine_pool_recycle: int = _get_int(
+            "DATABASE_ENGINE_POOL_RECYCLE", 3600, "POSTGRES"
+        )
         self.database_engine_pool_size: int = _get_int("DATABASE_ENGINE_POOL_SIZE", 5, "POSTGRES")
-        self.database_engine_max_overflow: int = _get_int("DATABASE_ENGINE_MAX_OVERFLOW", 10, "POSTGRES")
-        self.database_engine_pool_ping: bool = _get_bool("DATABASE_ENGINE_POOL_PING", True, "POSTGRES")
+        self.database_engine_max_overflow: int = _get_int(
+            "DATABASE_ENGINE_MAX_OVERFLOW", 10, "POSTGRES"
+        )
+        self.database_engine_pool_ping: bool = _get_bool(
+            "DATABASE_ENGINE_POOL_PING", True, "POSTGRES"
+        )
         self.database_echo: bool = _get_bool("DATABASE_ECHO", False, "POSTGRES")
 
     @property
