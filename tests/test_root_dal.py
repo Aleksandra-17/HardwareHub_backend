@@ -2,8 +2,6 @@
 
 from unittest.mock import AsyncMock
 
-import pytest
-
 from src.routers.root.dal import RootDAL
 
 

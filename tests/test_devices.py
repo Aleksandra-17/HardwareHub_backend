@@ -1,25 +1,19 @@
 """Tests for devices router."""
 
 from datetime import date
-from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
-from src.routers.devices.schemas import AuditEntryRead, DeviceRead
 from src.routers.devices.actions import (
-    create_device,
     delete_device,
     get_device,
     get_device_audit,
     list_devices,
-    update_device,
 )
 from src.routers.devices.dal import AuditEntryDAL, DeviceDAL
-from src.routers.devices.enums import DeviceStatus
-from src.routers.devices.models import AuditEntry, Device
-from src.routers.devices.schemas import DeviceCreate, DeviceUpdate
+from src.routers.devices.schemas import AuditEntryRead, DeviceRead
 
 
 class TestDeviceDAL:

@@ -1,10 +1,7 @@
 """Tests for Pydantic schemas."""
 
 from datetime import date
-from decimal import Decimal
 from uuid import uuid4
-
-import pytest
 
 from src.routers.device_types.schemas import DeviceTypeRead
 from src.routers.devices.enums import DeviceStatus

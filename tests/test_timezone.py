@@ -1,8 +1,6 @@
 """Tests for misc.timezone."""
 
-from unittest.mock import patch
 
-import pytest
 
 from src.misc.timezone import get_datetime
 

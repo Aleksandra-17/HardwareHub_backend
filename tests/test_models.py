@@ -2,8 +2,6 @@
 
 from uuid import uuid4
 
-import pytest
-
 from src.routers.device_types.models import DeviceType
 from src.routers.devices.models import AuditEntry, Device
 from src.routers.locations.models import Location

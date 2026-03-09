@@ -1,6 +1,5 @@
 """Tests for main app."""
 
-import pytest
 
 from src.main import app
 

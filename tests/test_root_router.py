@@ -15,7 +15,9 @@ class TestHealthActions:
     async def test_health_db_redis_ok(self):
         """Health returns healthy when DB and Redis work."""
         mock_session = AsyncMock()
-        mock_session.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(first=lambda: 1)))
+        mock_session.execute = AsyncMock(
+            return_value=MagicMock(scalars=lambda: MagicMock(first=lambda: 1))
+        )
 
         with patch("src.routers.root.actions.RedisController") as MockRedis:
             mock_redis = AsyncMock()
@@ -57,7 +59,9 @@ class TestHealthActions:
     async def test_health_redis_fails(self):
         """Health returns unhealthy when Redis fails."""
         mock_session = AsyncMock()
-        mock_session.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(first=lambda: 1)))
+        mock_session.execute = AsyncMock(
+            return_value=MagicMock(scalars=lambda: MagicMock(first=lambda: 1))
+        )
 
         with patch("src.routers.root.actions.RedisController") as MockRedis:
             MockRedis.set = AsyncMock(side_effect=Exception("Redis connection failed"))

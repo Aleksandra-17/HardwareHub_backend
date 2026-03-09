@@ -1,13 +1,11 @@
 """Tests for locations router."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 import pytest
 
 from src.routers.locations.actions import list_locations
 from src.routers.locations.dal import LocationDAL
-from src.routers.locations.models import Location
 
 
 class TestLocationDAL:

@@ -1,10 +1,8 @@
 """Tests for database module."""
 
-from unittest.mock import MagicMock, patch
 
-import pytest
 
-from src.database.base import Base, resolve_table_name
+from src.database.base import resolve_table_name
 from src.database.dependencies import DbSession
 
 

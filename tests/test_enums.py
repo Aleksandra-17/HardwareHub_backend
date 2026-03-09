@@ -1,6 +1,5 @@
 """Tests for enums."""
 
-import pytest
 
 from src.routers.device_types.enums import Category
 from src.routers.devices.enums import DeviceStatus
