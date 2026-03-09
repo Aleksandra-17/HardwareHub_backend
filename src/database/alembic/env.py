@@ -1,4 +1,5 @@
 import asyncio
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -11,6 +12,23 @@ from src.routers.device_types.models import DeviceType  # noqa: F401
 from src.routers.devices.models import AuditEntry, Device  # noqa: F401
 from src.routers.locations.models import Location  # noqa: F401
 from src.routers.people.models import Person  # noqa: F401
+
+
+def _get_url() -> str:
+    """URL для миграций: DATABASE_URL или из POSTGRES_* env, иначе из alembic.ini."""
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        return url
+    ip = os.environ.get("POSTGRES_IP")
+    if ip:
+        user = os.environ.get("POSTGRES_USERNAME", "postgres")
+        pwd = os.environ.get("POSTGRES_PASSWORD", "postgres")
+        port = os.environ.get("POSTGRES_PORT", "5432")
+        db = os.environ.get("POSTGRES_DATABASE_NAME", "fastapi_db")
+        driver = os.environ.get("POSTGRES_DRIVER", "asyncpg")
+        return f"postgresql+{driver}://{user}:{pwd}@{ip}:{port}/{db}"
+    return context.config.get_main_option("sqlalchemy.url", "") or ""
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -46,7 +64,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = _get_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -83,7 +101,7 @@ def run_async_migrations_online() -> None:
 
     This function provides async migration support for asyncpg driver.
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = _get_url()
 
     if not url:
         raise ValueError("No sqlalchemy.url found in configuration")
@@ -111,7 +129,7 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     # Check if we're using asyncpg
-    url = config.get_main_option("sqlalchemy.url")
+    url = _get_url()
     if url and "asyncpg" in url:
         run_async_migrations_online()
     else:

@@ -30,6 +30,9 @@ COPY --from=builder /root/.local /home/appuser/.local
 
 # Copy application code
 COPY --chown=appuser:appuser . .
+RUN cp alembic.ini.example alembic.ini
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Set environment variables
 ENV PATH=/home/appuser/.local/bin:$PATH \
@@ -47,6 +50,9 @@ EXPOSE 8000
 # Note: Uses default port 8000. Set UVICORN_PORT env var to change.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/api/root/health')" || exit 1
+
+# Entrypoint: run migrations then exec CMD
+ENTRYPOINT ["/entrypoint.sh"]
 
 # Run the application
 # Config: env vars from docker-compose
