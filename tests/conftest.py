@@ -8,10 +8,11 @@ from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Set test env before importing app
+# Set test env before importing app (JWT secret must be 32+ chars for PyJWT)
 os.environ.setdefault("POSTGRES_IP", "localhost")
 os.environ.setdefault("POSTGRES_DATABASE_NAME", "test_db")
 os.environ.setdefault("REDIS_HOST", "localhost")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-32-chars-minimum-length")
 
 
 @pytest.fixture(autouse=True)
@@ -31,7 +32,7 @@ def env_config():
         "REDIS_PASSWORD": "",
         "UVICORN_HOST": "0.0.0.0",
         "UVICORN_PORT": "8000",
-        "JWT_SECRET_KEY": "test-secret-key-for-tests-only",
+        "JWT_SECRET_KEY": "a" * 32,
         "JWT_ALGORITHM": "HS256",
         "JWT_ACCESS_TOKEN_EXPIRE_MINUTES": "30",
         "JWT_REFRESH_TOKEN_EXPIRE_DAYS": "7",
