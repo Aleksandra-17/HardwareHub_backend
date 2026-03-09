@@ -30,7 +30,7 @@ clean: ## Remove containers, volumes, and images
 	docker compose -f docker/docker-compose.dev.yml down -v --rmi all
 
 test: ## Run tests
-	pytest tests/ -v --cov=app --cov-report=html
+	pytest tests/ -v --cov=src --cov-report=html
 
 lint: ## Run linter
 	ruff check .
@@ -47,7 +47,7 @@ migrate-create: ## Create a new migration
 	alembic revision --autogenerate -m "$$msg"
 
 shell: ## Open Python shell with app context
-	python -c "from app.main import app; import IPython; IPython.embed()"
+	python -c "from src.main import app; import IPython; IPython.embed()"
 
 db-shell: ## Open database shell
 	docker exec -it fastapi-postgres psql -U postgres -d fastapi_db
