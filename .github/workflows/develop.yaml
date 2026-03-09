@@ -35,5 +35,5 @@ jobs:
 
       - name: Run tests
         run: |
-          pip install pytest pytest-cov
-          pytest --cov=. --cov-report=xml
+          pip install pytest pytest-asyncio pytest-cov
+          pytest tests/ -v --cov=src --cov-report=xml
