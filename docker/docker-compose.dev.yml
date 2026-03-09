@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  fastapi-app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    container_name: fastapi-app-dev
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # debugger port
+    environment:
+      - POSTGRES_DATABASE=postgresql
+      - POSTGRES_DRIVER=asyncpg
+      - POSTGRES_DATABASE_NAME=fastapi_db
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_IP=postgres
+      - POSTGRES_PORT=5432
+      - UVICORN_HOST=0.0.0.0
+      - UVICORN_PORT=8000
+      - UVICORN_WORKERS=1
+      - UVICORN_LOOP=uvloop
+      - UVICORN_HTTP=httptools
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=
+    volumes:
+      - ..:/app
+      - /app/__pycache__
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: fastapi-postgres-dev
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=fastapi_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: fastapi-redis-dev
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+volumes:
+  postgres-dev-data:
+
+networks:
+  app-network:
+    driver: bridge
+
