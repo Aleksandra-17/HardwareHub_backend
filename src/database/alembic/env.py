@@ -6,6 +6,7 @@ from sqlalchemy import engine_from_config, pool
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from src.database.base import Base
+from src.routers.auth.models import User  # noqa: F401
 from src.routers.device_types.models import DeviceType  # noqa: F401
 from src.routers.devices.models import AuditEntry, Device  # noqa: F401
 from src.routers.locations.models import Location  # noqa: F401
