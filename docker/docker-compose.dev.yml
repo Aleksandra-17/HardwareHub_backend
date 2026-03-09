@@ -26,6 +26,10 @@ services:
       - REDIS_PORT=6379
       - REDIS_DB=0
       - REDIS_PASSWORD=
+      - JWT_SECRET_KEY=dev-secret-key-min-32-chars-required
+      - JWT_ALGORITHM=HS256
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
     volumes:
       - ..:/app
       - /app/__pycache__
