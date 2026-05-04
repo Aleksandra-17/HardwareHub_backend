@@ -1,238 +1,310 @@
-# FastAPI Template
+# HardwareHub Backend
 
-A production-ready FastAPI boilerplate designed for rapid project setup — featuring clean architecture, Docker support, CI/CD, logging, and config via environment variables or INI.
+REST API для веб-приложения **HardwareHub** (учёт техники: устройства, типы, локации, люди, отчёты, аудит, JWT-аутентификация). Репозиторий фронтенда: **HardwareHub-Frontend**.
 
-## Features
+## Стек
 
-- ⚡ **FastAPI** with Python 3.13
-- 🐳 **Docker** & **Docker Compose** for development and production
-- 🔄 **CI/CD** pipeline with GitHub Actions
-- 🗄️ **PostgreSQL** database with SQLAlchemy
-- 🔴 **Redis** for caching
-- 🔒 **Nginx** reverse proxy with rate limiting
-- 📝 **Alembic** for database migrations
-- 🧪 **Pytest** for testing
-- 📊 **Logging** configured and ready to use
-- 🔧 **Makefile** for convenient development
+- **Python 3.13**, **FastAPI**, **SQLAlchemy** (async), **PostgreSQL**, **Redis**
+- **Alembic** — миграции БД
+- **Docker / Docker Compose** — dev и production
+- **Nginx** (в production compose) — reverse proxy перед приложением
+- **Pytest**, **Ruff** — тесты и линтинг
 
-## Quick Start
+---
 
-### Prerequisites
+## Требования
 
-- Docker and Docker Compose
-- Python 3.13+ (for local development)
-- Make (optional)
+- **Docker** и **Docker Compose** (рекомендуется для единообразного окружения)
+- либо **Python 3.13+** для запуска без Docker (плюс локальные PostgreSQL и Redis)
+- **Make** (опционально, для целей из `Makefile`)
 
-### Installation
+---
 
-1. Clone the repository:
+## Клонирование
+
 ```bash
-git clone <your-repo-url>
-cd fastapi-template
+git clone https://github.com/<ваш-орг>/HardwareHub-Backend.git
+cd HardwareHub-Backend
 ```
 
-2. **Docker** (recommended): copy `.env.example` to `.env` and adjust values. Config is passed via docker-compose.
-```bash
-cp .env.example .env
-```
+---
 
-   **Local dev without Docker**: copy `config.ini.example` to `config.ini` and edit.
+## Быстрый старт: разработка в Docker
 
-### Running (Development)
+Из **корня репозитория** (каталог, где лежит `Makefile`):
 
-#### Using Docker Compose:
 ```bash
 make dev
-# or
+```
+
+Эквивалент без Make:
+
+```bash
 docker compose -f docker/docker-compose.dev.yml up --build
 ```
 
-#### Locally (without Docker):
+Что поднимается (см. `docker/docker-compose.dev.yml`):
+
+- **fastapi-app-dev** — приложение на порту **8000** (хот-релоад через монтирование кода)
+- **postgres** — PostgreSQL, порт **5432** на хосте
+- **redis** — Redis, порт **6379** на хосте
+
+После старта:
+
+- API: **http://localhost:8000**
+- Проверка здоровья: **http://localhost:8000/api/root/health**
+- OpenAPI JSON: **http://localhost:8000/api/openapi.json**
+- Swagger UI: **http://localhost:8000/api/docs** (защищён HTTP Basic; в коде по умолчанию логин/пароль для доступа к документации — заглушки **USERNAME** / **PASSWORD**, их нужно сменить в используемой среде согласно вашей политике безопасности)
+
+Остановка:
+
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+docker compose -f docker/docker-compose.dev.yml down
+```
+
+или `make down` (останавливает и prod, и dev compose — см. `Makefile`).
+
+### Миграции в dev
+
+Образы **dev** и **production** используют **`docker/entrypoint.sh`**: при каждом старте контейнера приложения выполняется **`alembic upgrade head`** (с повторными попытками, пока PostgreSQL не готов). Если миграции не применились (ошибка в логах), выполните вручную:
+
+```bash
+docker exec -it fastapi-app-dev alembic upgrade head
+```
+
+Имя контейнера смотрите в `docker compose -f docker/docker-compose.dev.yml ps`.
+
+---
+
+## Локальный запуск без Docker (для отладки)
+
+1. Поднимите **PostgreSQL** и **Redis** сами (или отдельными контейнерами) и создайте БД (в dev compose по умолчанию имя базы **hardwarehub**).
+
+2. Виртуальное окружение и зависимости:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-python src/main.py
-# or
-uvicorn src.main:app --reload
 ```
 
-Application will be available at: http://localhost:8000
+3. Настройка подключения к БД и сервисам: в проекте используются **переменные окружения** и/или **`config.ini`** (шаблоны в репозитории не меняем в рамках документации — копируйте примеры в локальные файлы по инструкциям в комментариях к шаблонам).
 
-### Аутентификация (JWT)
-
-- **Логин:** `POST /api/auth/login` — username + password → access_token, refresh_token
-- **Обновление:** `POST /api/auth/refresh` — refresh_token → новые токены
-- **Текущий пользователь:** `GET /api/auth/me` (Bearer token)
-- **Создание пользователя (admin):** `POST /api/auth/users` — автогенерация пароля
-
-Для создания первого администратора при миграции: `export JWT_INITIAL_ADMIN_PASSWORD=your-password` перед `make migrate`.
-
-API documentation:
-- Swagger UI: http://localhost:8000/api/docs (protected)
-- OpenAPI JSON: http://localhost:8000/api/openapi.json
-
-### Running (Production)
+4. Миграции:
 
 ```bash
-make up
-# or
-docker compose -f docker/docker-compose.yml up -d
-```
-
-## Project Structure
-
-```
-fastapi-template/
-├── .github/
-│   └── workflows/
-│       └── develop.yaml          # CI/CD pipeline
-├── src/                          # Source code
-│   ├── main.py                   # FastAPI application entry point
-│   ├── config.py                 # Configuration (env vars or config.ini)
-│   ├── dependencies.py           # Global dependencies
-│   ├── schemas.py                # Shared Pydantic schemas
-│   ├── configuration/
-│   │   └── app.py                # FastAPI app initialization
-│   ├── middlewares/              # HTTP middlewares
-│   │   ├── __init__.py
-│   │   └── database.py           # Database session middleware
-│   ├── routers/                  # API routers
-│   │   ├── __init__.py           # Router registration
-│   │   └── root/                 # Root endpoints
-│   │       ├── router.py         # Route definitions
-│   │       ├── actions.py        # Business logic
-│   │       ├── dal.py            # Data access layer
-│   │       ├── models.py         # Database models
-│   │       └── schemas.py        # Request/response schemas
-│   ├── database/                 # Database configuration
-│   │   ├── core.py               # Database engine and sessions
-│   │   ├── base.py               # Base model class
-│   │   ├── dependencies.py       # Database dependencies
-│   │   ├── logging.py            # Session tracking
-│   │   └── alembic/              # Database migrations
-│   ├── redis_client/             # Redis operations
-│   │   └── redis.py              # Redis controller with caching methods
-│   ├── services/                 # External service integrations
-│   └── misc/                     # Utilities
-│       ├── security.py           # Security utilities
-│       └── timezone.py           # Timezone utilities
-├── docker/
-│   ├── Dockerfile                # Production Dockerfile
-│   ├── Dockerfile.dev            # Development Dockerfile
-│   ├── docker-compose.yml        # Production stack
-│   ├── docker-compose.dev.yml    # Development stack
-│   └── nginx/
-│       └── nginx.conf            # Nginx configuration
-├── config.ini.example            # Config template (local dev without Docker)
-├── .env.example                  # Env template (Docker Compose)
-├── alembic.ini.example           # Alembic configuration template
-├── requirements.txt              # Python dependencies
-├── Makefile                      # Build commands
-├── start.sh                      # Startup script
-└── README.md                     # This file
-```
-
-## Makefile Commands
-
-```bash
-make help           # Show all available commands
-make install        # Install dependencies
-make dev            # Start development environment
-make build          # Build production Docker image
-make up             # Start production environment
-make down           # Stop all containers
-make logs           # Show logs
-make clean          # Remove containers and volumes
-make test           # Run tests
-make lint           # Run linter
-make format         # Format code
-make migrate        # Apply migrations
-make migrate-create # Create new migration
-```
-
-## CI/CD
-
-GitHub Actions workflow automatically:
-1. Runs tests on every PR
-2. Checks code with linter
-3. Builds Docker image
-4. Deploys to production on push to main
-
-### Required GitHub Secrets:
-
-- `SSH_PRIVATE_KEY` - SSH key for server access
-- `SSH_HOST` - Server host
-- `SSH_USER` - Server user
-- `POSTGRES_USER` - PostgreSQL username for production
-- `POSTGRES_PASSWORD` - PostgreSQL password for production
-- `POSTGRES_DB` - PostgreSQL database name for production
-- `ALEMBIC_INI` - Contents of alembic.ini file for production
-- `DOCKER_USERNAME` - Docker Hub username (optional)
-- `DOCKER_PASSWORD` - Docker Hub password (optional)
-
-## Configuration
-
-**Docker Compose**: config is passed via `environment:` in docker-compose. Use `.env` for variable substitution (copy `.env.example` to `.env`).
-
-**Local dev (without Docker)**: use `config.ini` (copy `config.ini.example` to `config.ini`).
-
-**Env var names** (prefix + key): `POSTGRES_*`, `UVICORN_*`, `REDIS_*` (e.g. `POSTGRES_USERNAME`, `REDIS_HOST`, `UVICORN_PORT`).
-
-### Key Features
-
-#### Database Middleware
-- Automatic session management per request
-- Auto-commit on success, rollback on error
-- Session tracking for debugging
-- Request ID generation for tracing
-
-#### Redis Client
-- Simple caching interface with `get()`, `set()`, `delete()`, `update()`
-- JSON serialization support with `get_json()` and `set_json()`
-- TTL (Time To Live) management
-- Multiple key deletion support
-
-#### Health Check
-- Database connectivity check
-- Redis connectivity check
-- Returns 200 (healthy) or 503 (unhealthy)
-- Accessible at `/api/root/health`
-
-## Testing
-
-```bash
-# Run all tests
-make test
-
-# Run with coverage
-pytest --cov=app --cov-report=html
-
-# Run specific test
-pytest tests/test_api.py -v
-```
-
-## Development
-
-### Creating new migration:
-```bash
-make migrate-create
-# or
-alembic revision --autogenerate -m "migration description"
-```
-
-### Applying migrations:
-```bash
-make migrate
-# or
 alembic upgrade head
 ```
 
-### Code formatting:
+5. Запуск:
+
 ```bash
-make format
+python src/main.py
+# или
+uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## License
+Приложение: **http://localhost:8000**.
 
-MIT License - see [LICENSE](LICENSE) file
+Скрипт `start.sh` создаёт venv, ставит зависимости, при наличии каталога миграций выполняет `alembic upgrade head` и запускает `python src/main.py` — удобен для «чистой» машины с уже настроенным `config.ini` / env.
+
+---
+
+## Production: Docker Compose
+
+Из корня репозитория:
+
+```bash
+make up
+```
+
+или:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d
+```
+
+Состав типового production-файла `docker/docker-compose.yml`:
+
+- **fastapi-app** — приложение (порт приложения **8000**, наружу пробрасывается как `${PORT:-8000}:8000`)
+- **postgres** — данные в именованном volume
+- **redis** — кэш/сервисы в именованном volume
+- **nginx** — прокси на 80 (и опционально 443); конфиг монтируется из `docker/nginx/nginx.conf`
+
+Переменные окружения для подстановки в compose задаются через **`.env`** в корне проекта (шаблон в репозитории копируют в локальный `.env` на машине развёртывания — не коммитят секреты).
+
+Образ приложения при старте выполняет **`alembic upgrade head`** (см. `docker/entrypoint.sh`), затем запускает `python src/main.py`.
+
+Полезные команды:
+
+```bash
+make logs      # логи production-стека
+make down      # остановка
+```
+
+---
+
+## Аутентификация (JWT)
+
+- **Логин:** `POST /api/auth/login` — тело: `username`, `password` → `access_token`, `refresh_token`
+- **Обновление:** `POST /api/auth/refresh` — `refresh_token`
+- **Текущий пользователь:** `GET /api/auth/me` (заголовок `Authorization: Bearer <access_token>`)
+- **Создание пользователя (admin):** `POST /api/auth/users`
+
+Первый администратор при миграциях: в README шаблона указано задать **`JWT_INITIAL_ADMIN_PASSWORD`** перед применением миграций — следуйте актуальной документации в коде миграций/скриптов.
+
+---
+
+## Префиксы API
+
+Все маршруты приложения под префиксом **`/api`**:
+
+| Префикс | Назначение |
+|---------|------------|
+| `/api/auth` | Аутентификация |
+| `/api/root` | Служебное, в т.ч. `/api/root/health` |
+| `/api/device-types` | Типы устройств |
+| `/api/locations` | Локации |
+| `/api/people` | Люди |
+| `/api/devices` | Устройства |
+| `/api/reports` | Отчёты |
+
+Фронтенд по умолчанию ожидает базовый URL **`http://localhost:8000/api`** (переменная **`VITE_API_URL`** в репозитории фронта).
+
+---
+
+## CORS
+
+В приложении подключён **CORSMiddleware** (см. `src/configuration/app.py`). Для продакшена рекомендуется сузить список `allow_origins` под домен фронтенда. Пока фронт и API на разных портах localhost, обычно достаточно текущих настроек для разработки.
+
+---
+
+## Makefile (кратко)
+
+```bash
+make help           # все цели
+make install        # pip install -r requirements.txt
+make dev            # dev docker compose
+make build          # сборка production-образа
+make up             # production stack в фоне
+make down           # остановка compose
+make logs           # логи production
+make test           # pytest с покрытием
+make lint           # ruff check
+make format         # ruff format + fix
+make migrate        # alembic upgrade head (на хосте с настроенным alembic.ini)
+make migrate-create # интерактивное создание ревизии
+```
+
+---
+
+## Тестирование
+
+```bash
+make test
+# или
+pytest tests/ -v --cov=src --cov-report=html
+```
+
+---
+
+## Развёртывание на сервере и связка с фронтендом
+
+Ниже — пошаговый ориентир без изменения файлов репозитория: секреты, `.env` и правки nginx вы делаете на сервере.
+
+### 1. Подготовка сервера
+
+- Установите **Docker** и **Docker Compose plugin**.
+- (Рекомендуется) настройте **DNS** на IP сервера: например `api.example.com` для API.
+- Откройте в firewall **22** (SSH), **80** и **443** (HTTP/HTTPS). Порты PostgreSQL/Redis **не** выставляйте в интернет, если нет отдельной необходимости.
+
+### 2. Код и окружение
+
+```bash
+git clone https://github.com/<ваш-орг>/HardwareHub-Backend.git
+cd HardwareHub-Backend
+```
+
+Создайте на сервере **`.env`** из шаблона проекта (как описано в комментариях к `.env.example`), задайте надёжные пароли, **`JWT_SECRET_KEY`**, имена БД и пользователей. Убедитесь, что значения согласованы с `docker-compose.yml` (имена сервисов `postgres`, `redis` используются приложением по умолчанию).
+
+### 3. Запуск бэкенда
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+Проверьте:
+
+```bash
+curl -s http://127.0.0.1:8000/api/root/health
+# или с хоста, если PORT проброшен:
+curl -s http://127.0.0.1:<PORT>/api/root/health
+```
+
+Если перед приложением стоит nginx из того же compose на порту **80**, снаружи может быть удобнее проверять:
+
+```bash
+curl -s http://127.0.0.1/health
+```
+
+(в шаблоне nginx есть `location /health` → прокси на backend health).
+
+### 4. TLS
+
+- Разместите сертификаты (например **Let’s Encrypt**) и подключите их в **nginx** на сервере. В `docker/nginx/nginx.conf` в репозитории есть закомментированный пример блока `listen 443 ssl`.
+- Либо используйте внешний балансировщик (Cloudflare, Yandex ALB и т.д.), который терминирует TLS и проксирует HTTP на ваш сервер.
+
+### 5. Связка с HardwareHub Frontend
+
+1. API должен быть доступен с интернета по URL вида **`https://api.example.com`** с путями **`/api/...`** (либо один домен с префиксом `/api/` — см. ниже).
+2. Соберите фронтенд с переменной:
+
+   ```bash
+   export VITE_API_URL=https://api.example.com/api
+   npm run build
+   ```
+
+3. Разместите содержимое `dist/` или Docker-образ фронта за своим nginx / CDN.
+4. Убедитесь, что CORS на бэкенде разрешает origin фронта (например `https://app.example.com`), если политика безопасности это требует.
+
+**Один домен:** фронт на `https://example.com`, API за reverse proxy на `https://example.com/api/`. Тогда `VITE_API_URL=https://example.com/api`, а единый nginx отдаёт статику и проксирует `/api` на контейнер `fastapi-app:8000`. Репозиторий бэкенда уже содержит пример nginx только для API; объединение со статикой фронта — отдельный виртуальный хост на вашей стороне.
+
+### 6. CI/CD и секреты GitHub
+
+В `.github/workflows/` могут быть сценарии деплоя. Типичные секреты (уточняйте по актуальному workflow):
+
+- `SSH_PRIVATE_KEY`, `SSH_HOST`, `SSH_USER`
+- учётные данные БД для продакшена
+- содержимое **`ALEMBIC_INI`** или иные артефакты, если workflow их подставляет
+- при публикации образа: `DOCKER_USERNAME`, `DOCKER_PASSWORD`
+
+---
+
+## Структура проекта (сокращённо)
+
+```
+HardwareHub-Backend/
+├── src/
+│   ├── main.py                 # точка входа, защита /api/docs
+│   ├── configuration/app.py   # FastAPI, CORS, роутеры
+│   ├── routers/              # auth, devices, …
+│   ├── database/             # engine, Alembic
+│   └── ...
+├── docker/
+│   ├── Dockerfile, Dockerfile.dev
+│   ├── docker-compose.yml, docker-compose.dev.yml
+│   ├── entrypoint.sh
+│   └── nginx/nginx.conf
+├── tests/
+├── requirements.txt
+├── Makefile
+└── start.sh
+```
+
+Дополнительная документация в каталоге **`docs/`** (например `docs/BACKEND.md`).
+
+---
+
+## Лицензия
+
+MIT License — см. файл [LICENSE](LICENSE), если он присутствует в репозитории.
