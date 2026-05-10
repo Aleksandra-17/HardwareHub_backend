@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.routers.devices.models import AuditEntry, Device
 
@@ -28,7 +29,7 @@ class DeviceDAL:
         order: str = "asc",
     ) -> list[Device]:
         """Список устройств с фильтрацией и сортировкой."""
-        stmt = select(Device)
+        stmt = select(Device).options(selectinload(Device.workstation))
         conditions = []
 
         if search:
@@ -70,7 +71,11 @@ class DeviceDAL:
 
     async def get_by_id(self, device_id: UUID) -> Device | None:
         """Получить устройство по ID."""
-        stmt = select(Device).where(Device.id == device_id)
+        stmt = (
+            select(Device)
+            .options(selectinload(Device.workstation))
+            .where(Device.id == device_id)
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -92,6 +97,7 @@ class DeviceDAL:
         purchase_price: Decimal | None = None,
         purchase_date: date | None = None,
         qr_code: str | None = None,
+        workstation_id: UUID | None = None,
     ) -> Device:
         """Создать устройство."""
         device = Device(
@@ -99,6 +105,7 @@ class DeviceDAL:
             name=name,
             device_type_id=device_type_id,
             location_id=location_id,
+            workstation_id=workstation_id,
             status=status,
             serial_number=serial_number,
             model=model,
@@ -117,9 +124,9 @@ class DeviceDAL:
         return device
 
     async def update(self, device: Device, **kwargs: object) -> Device:
-        """Обновить устройство."""
+        """Обновить переданные поля (None допускается для сброса опциональных FK)."""
         for key, value in kwargs.items():
-            if hasattr(device, key) and value is not None:
+            if hasattr(device, key):
                 setattr(device, key, value)
         await self.session.flush()
         await self.session.refresh(device)

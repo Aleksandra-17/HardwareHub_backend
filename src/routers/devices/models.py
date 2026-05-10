@@ -34,6 +34,10 @@ class Device(Base):
         ForeignKey("locations.id"),
         nullable=True,
     )
+    workstation_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("workstations.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     person_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("people.id"),
         nullable=True,
@@ -53,6 +57,7 @@ class Device(Base):
         Index("idx_devices_status", "status"),
         Index("idx_devices_device_type", "device_type_id"),
         Index("idx_devices_location", "location_id"),
+        Index("idx_devices_workstation", "workstation_id"),
         Index("idx_devices_person", "person_id"),
         Index("idx_devices_inventory", "inventory_number"),
     )
@@ -71,6 +76,11 @@ class Device(Base):
         "Person",
         back_populates="devices",
         foreign_keys=[person_id],
+    )
+    workstation: Mapped["Workstation | None"] = relationship(
+        "Workstation",
+        back_populates="devices",
+        foreign_keys=[workstation_id],
     )
     audit_entries: Mapped[list["AuditEntry"]] = relationship(
         "AuditEntry",

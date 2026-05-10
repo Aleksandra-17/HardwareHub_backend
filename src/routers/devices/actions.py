@@ -3,7 +3,9 @@
 from datetime import date
 from uuid import UUID
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status as http_status
 
 from src.routers.devices.dal import AuditEntryDAL, DeviceDAL
 from src.routers.devices.schemas import (
@@ -12,6 +14,34 @@ from src.routers.devices.schemas import (
     DeviceRead,
     DeviceUpdate,
 )
+
+
+async def _ensure_workstation_for_location(
+    session: AsyncSession,
+    workstation_id: UUID | None,
+    location_id: UUID | None,
+) -> None:
+    """Убедиться, что рабочее место в том же кабинете, что и учётная привязка устройства."""
+    if workstation_id is None:
+        return
+    if location_id is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="Нельзя привязать рабочее место без кабинета",
+        )
+    from src.routers.workstations.models import Workstation
+
+    ws = await session.get(Workstation, workstation_id)
+    if ws is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail="Рабочее место не найдено",
+        )
+    if ws.location_id != location_id:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="Рабочее место не принадлежит выбранному кабинету",
+        )
 
 
 async def list_devices(
@@ -62,6 +92,7 @@ async def create_device(
     username: str,
 ) -> DeviceRead:
     """Создать устройство."""
+    await _ensure_workstation_for_location(session, data.workstation_id, data.location_id)
     today = date.today()
     dal = DeviceDAL(session)
     device = await dal.create(
@@ -69,6 +100,7 @@ async def create_device(
         name=data.name,
         device_type_id=data.device_type_id,
         location_id=data.location_id,
+        workstation_id=data.workstation_id,
         status=data.status.value,
         serial_number=data.serial_number,
         model=data.model,
@@ -100,6 +132,7 @@ def _field_label(field: str) -> str:
         "model": "Модель",
         "manufacturer": "Производитель",
         "location_id": "Кабинет",
+        "workstation_id": "Рабочее место",
         "person_id": "Ответственный",
         "commission_date": "Дата ввода",
         "purchase_date": "Дата покупки",
@@ -123,6 +156,21 @@ async def update_device(
         return None
     update_data = data.model_dump(exclude_unset=True, by_alias=False)
     kwargs = {k: v for k, v in update_data.items() if hasattr(device, k)}
+    # Сменили кабинет — расходится с текущим РМ или кабинет сняли
+    if "location_id" in kwargs:
+        if kwargs["location_id"] is None:
+            kwargs["workstation_id"] = None
+        elif device.workstation_id and "workstation_id" not in update_data:
+            from src.routers.workstations.models import Workstation
+
+            ws_live = await session.get(Workstation, device.workstation_id)
+            if ws_live is not None and ws_live.location_id != kwargs["location_id"]:
+                kwargs["workstation_id"] = None
+
+    effective_location = kwargs.get("location_id") if "location_id" in kwargs else device.location_id
+    if "workstation_id" in kwargs:
+        await _ensure_workstation_for_location(session, kwargs["workstation_id"], effective_location)
+
     if "status" in kwargs and kwargs["status"] is not None:
         kwargs["status"] = kwargs["status"].value
     audit_actions = []
@@ -211,6 +259,9 @@ def _device_to_read(device) -> DeviceRead:
     status = (
         device.status if isinstance(device.status, DeviceStatus) else DeviceStatus(device.status)
     )
+    ws_code = None
+    if device.workstation is not None:
+        ws_code = device.workstation.seat_code
     return DeviceRead(
         id=device.id,
         inventory_number=device.inventory_number,
@@ -221,6 +272,8 @@ def _device_to_read(device) -> DeviceRead:
         manufacturer=device.manufacturer,
         status=status,
         location_id=device.location_id,
+        workstation_id=device.workstation_id,
+        workstation_seat_code=ws_code,
         person_id=device.person_id,
         commission_date=device.commission_date,
         last_check_date=device.last_check_date,

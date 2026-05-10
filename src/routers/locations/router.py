@@ -6,8 +6,13 @@ from fastapi import APIRouter, status
 
 from src.database.dependencies import DbSession
 from src.routers.auth.dependencies import CurrentUser
-from src.routers.locations.actions import create_location, delete_location, list_locations
-from src.routers.locations.schemas import LocationCreate, LocationRead
+from src.routers.locations.actions import (
+    create_location,
+    delete_location,
+    list_locations,
+    update_location,
+)
+from src.routers.locations.schemas import LocationCreate, LocationRead, LocationUpdate
 
 router = APIRouter()
 
@@ -28,7 +33,11 @@ router = APIRouter()
                             "building": "Корпус А",
                             "floor": "1",
                             "description": "Приёмная",
+                            "workstationCapacity": 4,
                             "deviceCount": 4,
+                            "computingDeviceCount": 2,
+                            "workstationDeficit": 2,
+                            "needsEquipment": True,
                         }
                     ]
                 }
@@ -57,6 +66,21 @@ async def post_location(
 ) -> LocationRead:
     """Создать новую локацию."""
     return await create_location(session, data)
+
+
+@router.patch(
+    "/{location_id}",
+    response_model=LocationRead,
+    summary="Обновить локацию",
+)
+async def patch_location(
+    session: DbSession,
+    location_id: UUID,
+    data: LocationUpdate,
+    _user: CurrentUser,
+) -> LocationRead:
+    """Частично обновить кабинет (в т.ч. план рабочих мест)."""
+    return await update_location(session, location_id, data)
 
 
 @router.delete(

@@ -27,6 +27,8 @@ class DeviceRead(BaseModel):
     manufacturer: str | None = None
     status: DeviceStatus
     location_id: UUID | None = Field(None, alias="locationId")
+    workstation_id: UUID | None = Field(None, alias="workstationId")
+    workstation_seat_code: str | None = Field(None, alias="workstationSeatCode")
     person_id: UUID | None = Field(None, alias="personId")
     commission_date: date | None = Field(None, alias="commissionDate")
     last_check_date: date | None = Field(None, alias="lastCheckDate")
@@ -49,6 +51,7 @@ class DeviceCreate(BaseModel):
     manufacturer: str | None = None
     status: DeviceStatus
     location_id: UUID = Field(..., alias="locationId")
+    workstation_id: UUID | None = Field(None, alias="workstationId")
     person_id: UUID | None = Field(None, alias="personId")
     commission_date: date | None = Field(None, alias="commissionDate")
     last_check_date: date | None = Field(None, alias="lastCheckDate")
@@ -71,6 +74,7 @@ class DeviceUpdate(BaseModel):
     manufacturer: str | None = None
     status: DeviceStatus | None = None
     location_id: UUID | None = Field(None, alias="locationId")
+    workstation_id: UUID | None = Field(None, alias="workstationId")
     person_id: UUID | None = Field(None, alias="personId")
     commission_date: date | None = Field(None, alias="commissionDate")
     last_check_date: date | None = Field(None, alias="lastCheckDate")

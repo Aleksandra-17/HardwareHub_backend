@@ -55,10 +55,15 @@ class TestLocationRead:
             name="Каб. 101",
             building="Корпус А",
             floor="1",
-            device_count=3,
+            workstation_capacity=4,
+            device_count=5,
+            computing_device_count=3,
+            workstation_deficit=1,
+            needs_equipment=True,
         )
         assert data.name == "Каб. 101"
-        assert data.device_count == 3
+        assert data.device_count == 5
+        assert data.workstation_deficit == 1
 
 
 class TestPersonRead:

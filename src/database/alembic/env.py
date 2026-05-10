@@ -12,6 +12,7 @@ from src.routers.device_types.models import DeviceType  # noqa: F401
 from src.routers.devices.models import AuditEntry, Device  # noqa: F401
 from src.routers.locations.models import Location  # noqa: F401
 from src.routers.people.models import Person  # noqa: F401
+from src.routers.workstations.models import Workstation, WorkstationRequirement  # noqa: F401
 
 
 def _get_url() -> str:
