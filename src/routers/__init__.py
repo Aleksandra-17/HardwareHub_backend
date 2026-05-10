@@ -5,9 +5,9 @@ from src.routers.device_types.router import router as device_types_router
 from src.routers.devices.router import router as devices_router
 from src.routers.locations.router import router as locations_router
 from src.routers.people.router import router as people_router
-from src.routers.workstations.router import router as workstations_router
 from src.routers.reports.router import router as reports_router
 from src.routers.root.router import router as root_router
+from src.routers.workstations.router import router as workstations_router
 
 
 @dataclass(frozen=True)

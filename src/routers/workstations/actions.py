@@ -9,7 +9,12 @@ from starlette import status
 
 from src.routers.workstations.dal import WorkstationDAL
 from src.routers.workstations.models import Workstation, WorkstationRequirement
-from src.routers.workstations.schemas import WorkstationCreate, WorkstationRead, WorkstationRequirementRead, WorkstationUpdate
+from src.routers.workstations.schemas import (
+    WorkstationCreate,
+    WorkstationRead,
+    WorkstationRequirementRead,
+    WorkstationUpdate,
+)
 
 
 def _requirement_to_read(r: WorkstationRequirement) -> WorkstationRequirementRead:

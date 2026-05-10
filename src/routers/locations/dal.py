@@ -5,8 +5,8 @@ from uuid import UUID
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.routers.devices.models import Device
 from src.routers.device_types.models import DeviceType
+from src.routers.devices.models import Device
 from src.routers.locations.models import Location
 
 
