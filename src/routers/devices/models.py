@@ -87,6 +87,11 @@ class Device(Base):
         back_populates="device",
         foreign_keys="AuditEntry.device_id",
     )
+    computer_components: Mapped[list["ComputerComponent"]] = relationship(
+        "ComputerComponent",
+        back_populates="computer",
+        cascade="all, delete-orphan",
+    )
 
 
 class AuditEntry(Base):

@@ -25,7 +25,7 @@ class DeviceType(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "category IN ('computing', 'office', 'network', 'other')",
+            "category IN ('computing', 'office', 'network', 'peripheral', 'other')",
             name="device_types_category_check",
         ),
     )

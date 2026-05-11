@@ -7,13 +7,18 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status as http_status
 
+from src.routers.device_types.models import DeviceType
 from src.routers.devices.dal import AuditEntryDAL, DeviceDAL
 from src.routers.devices.schemas import (
     AuditEntryRead,
+    DeviceComponentRead,
     DeviceCreate,
     DeviceRead,
+    DeviceRebuild,
     DeviceUpdate,
 )
+
+DETACHED_STATUSES = {"archived", "scrapped"}
 
 
 async def _ensure_workstation_for_location(
@@ -41,6 +46,53 @@ async def _ensure_workstation_for_location(
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
             detail="Рабочее место не принадлежит выбранному кабинету",
+        )
+
+
+def _validate_location_by_status(
+    *,
+    status_value: str,
+    location_id: UUID | None,
+    workstation_id: UUID | None,
+) -> None:
+    """Проверить правила привязки кабинета/места к статусу."""
+    if status_value in DETACHED_STATUSES:
+        if location_id is not None or workstation_id is not None:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="Для archived/scrapped кабинет и рабочее место должны быть пустыми",
+            )
+        return
+    if status_value == "in_use" and location_id is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="Для статуса in_use кабинет обязателен",
+        )
+
+
+def _supports_components(device_type: DeviceType | None) -> bool:
+    """Разрешена ли сборка комплектующих для данного типа устройства."""
+    if device_type is None:
+        return False
+    code = (device_type.code or "").upper()
+    name = (device_type.name or "").strip().lower()
+    return code in {"PC", "SRV"} or name in {"пк", "сервер"}
+
+
+async def _ensure_components_host_type(
+    session: AsyncSession,
+    device_type_id: UUID,
+    *,
+    has_components: bool,
+) -> None:
+    """Проверить, что комплектующие создаются только для ПК/сервера."""
+    if not has_components:
+        return
+    dt = await session.get(DeviceType, device_type_id)
+    if not _supports_components(dt):
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="Комплектующие можно задавать только для ПК или сервера",
         )
 
 
@@ -92,6 +144,17 @@ async def create_device(
     username: str,
 ) -> DeviceRead:
     """Создать устройство."""
+    status_value = data.status.value
+    _validate_location_by_status(
+        status_value=status_value,
+        location_id=data.location_id,
+        workstation_id=data.workstation_id,
+    )
+    await _ensure_components_host_type(
+        session,
+        data.device_type_id,
+        has_components=len(data.components) > 0,
+    )
     await _ensure_workstation_for_location(session, data.workstation_id, data.location_id)
     today = date.today()
     dal = DeviceDAL(session)
@@ -101,7 +164,7 @@ async def create_device(
         device_type_id=data.device_type_id,
         location_id=data.location_id,
         workstation_id=data.workstation_id,
-        status=data.status.value,
+        status=status_value,
         serial_number=data.serial_number,
         model=data.model,
         manufacturer=data.manufacturer,
@@ -119,7 +182,27 @@ async def create_device(
         action="Устройство создано",
         user=username,
     )
-    return _device_to_read(device)
+    if data.components:
+        from src.routers.components.dal import ComponentDAL
+
+        comp_dal = ComponentDAL(session)
+        for comp in data.components:
+            component = await comp_dal.create(
+                name=comp.name,
+                component_type=comp.component_type.value,
+                status=comp.status.value,
+                arrival_date=comp.arrival_date,
+                expiry_date=comp.expiry_date,
+                notes=comp.notes,
+            )
+            await comp_dal.attach(component.id, device.id)
+    fresh = await dal.get_by_id(device.id)
+    if fresh is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось прочитать созданное устройство",
+        )
+    return _device_to_read(fresh)
 
 
 def _field_label(field: str) -> str:
@@ -173,6 +256,18 @@ async def update_device(
 
     if "status" in kwargs and kwargs["status"] is not None:
         kwargs["status"] = kwargs["status"].value
+        if kwargs["status"] in DETACHED_STATUSES:
+            kwargs["location_id"] = None
+            kwargs["workstation_id"] = None
+
+    final_status = kwargs.get("status", device.status)
+    final_location = kwargs.get("location_id", device.location_id)
+    final_workstation = kwargs.get("workstation_id", device.workstation_id)
+    _validate_location_by_status(
+        status_value=final_status,
+        location_id=final_location,
+        workstation_id=final_workstation,
+    )
     audit_actions = []
     for key, new_val in kwargs.items():
         old_val = getattr(device, key, None)
@@ -186,7 +281,10 @@ async def update_device(
     audit_dal = AuditEntryDAL(session)
     for action in audit_actions:
         await audit_dal.create(device_id=device.id, action=action, user=username)
-    return _device_to_read(device)
+    fresh = await dal.get_by_id(device.id)
+    if fresh is None:
+        return None
+    return _device_to_read(fresh)
 
 
 async def delete_device(
@@ -252,6 +350,63 @@ async def get_device_audit(
     return [AuditEntryRead(id=e.id, date=e.date, action=e.action, user=e.user) for e in entries]
 
 
+async def rebuild_device_components(
+    session: AsyncSession,
+    device_id: UUID,
+    data: DeviceRebuild,
+    *,
+    username: str,
+) -> DeviceRead | None:
+    """Пересобрать комплектующие ПК пакетно."""
+    from src.routers.components.dal import ComponentDAL
+
+    dev_dal = DeviceDAL(session)
+    comp_dal = ComponentDAL(session)
+    device = await dev_dal.get_by_id(device_id)
+    if device is None:
+        return None
+    live = await comp_dal.get_device_with_type(device_id)
+    if not comp_dal.is_components_host_device(live):
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="Пересборка доступна только для ПК или сервера",
+        )
+
+    existing = await comp_dal.get_list(computer_id=device_id)
+    existing_by_type = {c.component_type: c for c in existing}
+    desired_by_type = {item.component_type.value: item.component_id for item in data.items}
+
+    # Отвязать то, что не входит в новую сборку.
+    for comp_type, comp in existing_by_type.items():
+        target_id = desired_by_type.get(comp_type)
+        if target_id is None or target_id != comp.id:
+            await comp_dal.detach(comp.id)
+
+    # Привязать/заменить выбранные комплектующие.
+    for item in data.items:
+        component = await comp_dal.get_by_id(item.component_id)
+        if component is None:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f"Комплектующая {item.component_id} не найдена",
+            )
+        if component.component_type != item.component_type.value:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="Тип комплектующей не совпадает с позицией сборки",
+            )
+        await comp_dal.attach(component.id, device_id)
+
+    audit_dal = AuditEntryDAL(session)
+    await audit_dal.create(
+        device_id=device.id,
+        action="Выполнена пересборка комплектующих ПК",
+        user=username,
+    )
+    device = await dev_dal.get_by_id(device_id)
+    return _device_to_read(device) if device is not None else None
+
+
 def _device_to_read(device) -> DeviceRead:
     """Конвертировать модель Device в DeviceRead."""
     from src.routers.devices.enums import DeviceStatus
@@ -262,6 +417,22 @@ def _device_to_read(device) -> DeviceRead:
     ws_code = None
     if device.workstation is not None:
         ws_code = device.workstation.seat_code
+    components = []
+    for link in device.computer_components:
+        if link.component is None:
+            continue
+        components.append(
+            DeviceComponentRead(
+                id=link.component.id,
+                name=link.component.name,
+                component_type=link.component.component_type,
+                status=link.component.status,
+                arrival_date=link.component.arrival_date,
+                expiry_date=link.component.expiry_date,
+                notes=link.component.notes,
+            )
+        )
+    components.sort(key=lambda c: c.component_type.value)
     return DeviceRead(
         id=device.id,
         inventory_number=device.inventory_number,
@@ -281,4 +452,5 @@ def _device_to_read(device) -> DeviceRead:
         purchase_price=device.purchase_price,
         purchase_date=device.purchase_date,
         qr_code=device.qr_code,
+        components=components,
     )

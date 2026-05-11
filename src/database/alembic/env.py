@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from src.database.base import Base
 from src.routers.auth.models import User  # noqa: F401
+from src.routers.components.models import Component, ComputerComponent  # noqa: F401
 from src.routers.device_types.models import DeviceType  # noqa: F401
 from src.routers.devices.models import AuditEntry, Device  # noqa: F401
 from src.routers.licenses.models import License  # noqa: F401

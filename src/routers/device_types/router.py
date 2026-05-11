@@ -50,7 +50,7 @@ async def get_device_types(
     response_model=DeviceTypeRead,
     status_code=status.HTTP_201_CREATED,
     summary="Создать тип устройства",
-    description="Создать новый тип устройства (требует авторизации). category: computing | office | network | other",
+    description="Создать новый тип устройства (требует авторизации). category: computing | office | network | peripheral | other",
     responses={
         201: {"description": "Тип устройства создан"},
         400: {"description": "name или code уже существуют"},

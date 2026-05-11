@@ -13,6 +13,7 @@ from src.routers.devices.actions import (
     get_device,
     get_device_audit,
     list_devices,
+    rebuild_device_components,
     update_device,
 )
 from src.routers.devices.description import (
@@ -27,6 +28,7 @@ from src.routers.devices.schemas import (
     AuditEntryRead,
     DeviceCreate,
     DeviceRead,
+    DeviceRebuild,
     DeviceUpdate,
     QRCodeResponse,
 )
@@ -197,6 +199,27 @@ async def put_device(
 ) -> DeviceRead:
     """Обновить устройство (PUT)."""
     return await patch_device(session, device_id, data, user)
+
+
+@router.post(
+    "/{device_id}/rebuild",
+    response_model=DeviceRead,
+    summary="Пересобрать ПК",
+    responses={404: {"description": "Устройство не найдено"}},
+)
+async def post_device_rebuild(
+    session: DbSession,
+    device_id: UUID,
+    data: DeviceRebuild,
+    user: CurrentUser,
+) -> DeviceRead:
+    """Пакетно заменить комплектующие у ПК."""
+    from fastapi import HTTPException
+
+    updated = await rebuild_device_components(session, device_id, data, username=user.username)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Устройство не найдено")
+    return updated
 
 
 @router.delete(

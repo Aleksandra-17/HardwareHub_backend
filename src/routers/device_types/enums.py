@@ -9,4 +9,5 @@ class Category(StrEnum):
     COMPUTING = "computing"
     OFFICE = "office"
     NETWORK = "network"
+    PERIPHERAL = "peripheral"
     OTHER = "other"

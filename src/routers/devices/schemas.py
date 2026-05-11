@@ -6,7 +6,47 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.routers.components.schemas import ComponentType
 from src.routers.devices.enums import DeviceStatus
+
+
+class DeviceComponentCreate(BaseModel):
+    """Комплектующая для создания вместе с устройством."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str = Field(..., min_length=1, max_length=255)
+    component_type: ComponentType = Field(..., alias="componentType")
+    status: DeviceStatus = DeviceStatus.IN_USE
+    arrival_date: date | None = Field(None, alias="arrivalDate")
+    expiry_date: date | None = Field(None, alias="expiryDate")
+    notes: str | None = None
+
+
+class DeviceComponentRead(BaseModel):
+    """Комплектующая в карточке устройства."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: UUID
+    name: str
+    component_type: ComponentType = Field(
+        ...,
+        alias="componentType",
+        serialization_alias="componentType",
+    )
+    status: DeviceStatus
+    arrival_date: date | None = Field(
+        None,
+        alias="arrivalDate",
+        serialization_alias="arrivalDate",
+    )
+    expiry_date: date | None = Field(
+        None,
+        alias="expiryDate",
+        serialization_alias="expiryDate",
+    )
+    notes: str | None = None
 
 
 class DeviceRead(BaseModel):
@@ -36,6 +76,7 @@ class DeviceRead(BaseModel):
     purchase_price: Decimal | None = Field(None, alias="purchasePrice")
     purchase_date: date | None = Field(None, alias="purchaseDate")
     qr_code: str | None = Field(None, alias="qrCode")
+    components: list[DeviceComponentRead] = []
 
 
 class DeviceCreate(BaseModel):
@@ -50,7 +91,7 @@ class DeviceCreate(BaseModel):
     model: str | None = None
     manufacturer: str | None = None
     status: DeviceStatus
-    location_id: UUID = Field(..., alias="locationId")
+    location_id: UUID | None = Field(None, alias="locationId")
     workstation_id: UUID | None = Field(None, alias="workstationId")
     person_id: UUID | None = Field(None, alias="personId")
     commission_date: date | None = Field(None, alias="commissionDate")
@@ -59,6 +100,7 @@ class DeviceCreate(BaseModel):
     purchase_price: Decimal | None = Field(None, alias="purchasePrice")
     purchase_date: date | None = Field(None, alias="purchaseDate")
     qr_code: str | None = Field(None, alias="qrCode")
+    components: list[DeviceComponentCreate] = []
 
 
 class DeviceUpdate(BaseModel):
@@ -82,6 +124,23 @@ class DeviceUpdate(BaseModel):
     purchase_price: Decimal | None = Field(None, alias="purchasePrice")
     purchase_date: date | None = Field(None, alias="purchaseDate")
     qr_code: str | None = Field(None, alias="qrCode")
+
+
+class DeviceRebuildItem(BaseModel):
+    """Одна позиция для пересборки ПК."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    component_id: UUID = Field(..., alias="componentId")
+    component_type: ComponentType = Field(..., alias="componentType")
+
+
+class DeviceRebuild(BaseModel):
+    """Пакетная пересборка ПК."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    items: list[DeviceRebuildItem]
 
 
 class QRCodeResponse(BaseModel):

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from src.routers.auth.router import router as auth_router
+from src.routers.components.router import router as components_router
 from src.routers.device_types.router import router as device_types_router
 from src.routers.devices.router import router as devices_router
 from src.routers.licenses.router import router as licenses_router
@@ -16,6 +17,7 @@ class Router:
     routers = [
         (auth_router, "/api/auth", ["auth"]),
         (root_router, "/api/root", ["root"]),
+        (components_router, "/api/components", ["components"]),
         (device_types_router, "/api/device-types", ["device-types"]),
         (licenses_router, "/api/licenses", ["licenses"]),
         (locations_router, "/api/locations", ["locations"]),

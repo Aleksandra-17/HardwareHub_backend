@@ -8,6 +8,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.routers.components.models import ComputerComponent
 from src.routers.devices.models import AuditEntry, Device
 
 
@@ -29,7 +30,10 @@ class DeviceDAL:
         order: str = "asc",
     ) -> list[Device]:
         """Список устройств с фильтрацией и сортировкой."""
-        stmt = select(Device).options(selectinload(Device.workstation))
+        stmt = select(Device).options(
+            selectinload(Device.workstation),
+            selectinload(Device.computer_components).selectinload(ComputerComponent.component),
+        )
         conditions = []
 
         if search:
@@ -73,7 +77,10 @@ class DeviceDAL:
         """Получить устройство по ID."""
         stmt = (
             select(Device)
-            .options(selectinload(Device.workstation))
+            .options(
+                selectinload(Device.workstation),
+                selectinload(Device.computer_components).selectinload(ComputerComponent.component),
+            )
             .where(Device.id == device_id)
         )
         result = await self.session.execute(stmt)
