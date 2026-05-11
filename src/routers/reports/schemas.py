@@ -37,6 +37,12 @@ class InventoryDeviceItem(BaseModel):
         ..., alias="inventoryNumber", serialization_alias="inventoryNumber"
     )
     name: str
+    device_type_name: str | None = Field(
+        None, alias="deviceTypeName", serialization_alias="deviceTypeName"
+    )
+    workstation_seat: str | None = Field(
+        None, alias="workstationSeat", serialization_alias="workstationSeat"
+    )
     serial_number: str | None = Field(
         None, alias="serialNumber", serialization_alias="serialNumber"
     )
@@ -54,6 +60,8 @@ class InventoryResponse(BaseModel):
     id: UUID
     document_number: str = Field(..., alias="documentNumber", serialization_alias="documentNumber")
     date: date
+    start_date: date = Field(..., alias="startDate", serialization_alias="startDate")
+    end_date: date = Field(..., alias="endDate", serialization_alias="endDate")
     location_name: str = Field(..., alias="locationName", serialization_alias="locationName")
     person_name: str = Field(..., alias="personName", serialization_alias="personName")
     device_count: int = Field(..., alias="deviceCount", serialization_alias="deviceCount")

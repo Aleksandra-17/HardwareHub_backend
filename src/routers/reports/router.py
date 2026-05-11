@@ -5,7 +5,12 @@ from fastapi.responses import Response
 
 from src.database.dependencies import DbSession
 from src.routers.auth.dependencies import CurrentUser
-from src.routers.reports.actions import create_inventory_report, export_devices
+from src.routers.reports.actions import (
+    create_inventory_report,
+    export_components,
+    export_devices,
+    export_licenses,
+)
 from src.routers.reports.schemas import ExportRequest, InventoryRequest, InventoryResponse
 
 router = APIRouter()
@@ -28,6 +33,58 @@ async def post_devices_export(
 ) -> Response:
     """Экспорт устройств в CSV или Excel."""
     content, media_type, filename = await export_devices(session, data)
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
+@router.post(
+    "/licenses/export",
+    summary="Экспорт лицензий в CSV/Excel",
+    responses={
+        200: {
+            "content": {"text/csv": {}},
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {},
+        }
+    },
+)
+async def post_licenses_export(
+    session: DbSession,
+    data: ExportRequest,
+    _user: CurrentUser,
+) -> Response:
+    """Экспорт лицензий в CSV или Excel."""
+    content, media_type, filename = await export_licenses(session, data)
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
+@router.post(
+    "/components/export",
+    summary="Экспорт комплектующих в CSV/Excel",
+    responses={
+        200: {
+            "content": {"text/csv": {}},
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {},
+        }
+    },
+)
+async def post_components_export(
+    session: DbSession,
+    data: ExportRequest,
+    _user: CurrentUser,
+) -> Response:
+    """Экспорт комплектующих в CSV или Excel (опционально по кабинету хоста)."""
+    content, media_type, filename = await export_components(session, data)
     return Response(
         content=content,
         media_type=media_type,
