@@ -10,6 +10,7 @@ from src.database.base import Base
 from src.routers.auth.models import User  # noqa: F401
 from src.routers.device_types.models import DeviceType  # noqa: F401
 from src.routers.devices.models import AuditEntry, Device  # noqa: F401
+from src.routers.licenses.models import License  # noqa: F401
 from src.routers.locations.models import Location  # noqa: F401
 from src.routers.people.models import Person  # noqa: F401
 from src.routers.workstations.models import Workstation, WorkstationRequirement  # noqa: F401
